@@ -4,16 +4,16 @@ import tempfile
 import subprocess
 import sys
 
-def install_dependencies():
+def install_system_dependencies():
     try:
-        # Run the shell script with bash
-        subprocess.check_call(["bash", "./install_dependencies.sh"])
+        subprocess.check_call(["apt-get", "update"])
+        subprocess.check_call(["apt-get", "install", "-y", "libsm6", "libxext6", "libgl1-mesa-glx", "ffmpeg"])
     except subprocess.CalledProcessError as e:
-        print(f"An error occurred while installing dependencies: {e}")
+        print(f"An error occurred while installing system dependencies: {e}")
         sys.exit(1)
 
-# Install dependencies before running the app
-install_dependencies()
+# Install system dependencies at runtime
+install_system_dependencies()
 import cv2
 import os
 import time
