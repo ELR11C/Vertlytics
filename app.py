@@ -705,10 +705,10 @@ def generate_recommendations(composite_score, risk_category, component_scores, m
         recommendations.append(f" - {comp.replace('_', ' ').title()}: {score:.2f}")
     
     # Optional: Provide measured values for further context.
-    recommendations.append("")
-    recommendations.append("Measured Metrics:")
-    for key, value in measured_metrics.items():
-        recommendations.append(f" - {key.replace('_', ' ').title()}: {value:.2f}")
+    # recommendations.append("")
+    # recommendations.append("Measured Metrics:")
+    # for key, value in measured_metrics.items():
+      #  recommendations.append(f" - {key.replace('_', ' ').title()}: {value:.2f}")
     
     return "\n".join(recommendations)
 
