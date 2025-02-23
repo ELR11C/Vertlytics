@@ -2,6 +2,18 @@
 import streamlit as st
 import tempfile
 import subprocess
+import sys
+
+def install_dependencies():
+    try:
+        # Run the script to install dependencies
+        subprocess.check_call(["./install_dependencies.sh"])
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while installing dependencies: {e}")
+        sys.exit(1)
+
+# Install dependencies before running the app
+install_dependencies()
 import cv2
 import os
 import time
