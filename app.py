@@ -6,8 +6,8 @@ import sys
 
 def install_dependencies():
     try:
-        # Run the script to install dependencies
-        subprocess.check_call(["./install_dependencies.sh"])
+        # Run the shell script with bash
+        subprocess.check_call(["bash", "./install_dependencies.sh"])
     except subprocess.CalledProcessError as e:
         print(f"An error occurred while installing dependencies: {e}")
         sys.exit(1)
