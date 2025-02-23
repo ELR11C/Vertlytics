@@ -650,43 +650,43 @@ def generate_recommendations(composite_score, risk_category, component_scores, m
     
     # Hip Drop
     if component_scores["hip_drop_score"] > 1.0:
-        recommendations.append("Hip Drop: Excessive hip drop indicates poor core and gluteal control. "
+        recommendations.append("**Hip Drop**: Excessive hip drop indicates poor core and gluteal control. "
                                "Strengthening exercises focusing on the glutes, hip abductors, and core stability, "
                                "such as lateral band walks, single-leg squats, and planks, may help reduce this risk.\n")
     else:
-        recommendations.append("Hip Drop: Your hip drop is within a normal range.\n")
+        recommendations.append("**Hip Drop**: Your hip drop is within a normal range.\n")
     
     # Jump Performance
     if component_scores["jump_score"] > 1.0:
-        recommendations.append("Jump Performance: Your estimated jump height is below normative values, "
+        recommendations.append("**Jump Performance**: Your estimated jump height is below normative values, "
                                "which may reflect deficits in lower-body power. Plyometric exercises and "
                                "explosive strength training (e.g., box jumps, squat jumps) could improve performance.\n")
     else:
-        recommendations.append("Jump Performance: Your jump height is comparable to normative data.\n")
+        recommendations.append("**Jump Performance**: Your jump height is comparable to normative data.\n")
     
     # Asymmetry
     if component_scores["asymmetry_score"] > 1.0:
-        recommendations.append("Asymmetry: There is a noticeable imbalance between your left and right limb mechanics. "
+        recommendations.append("**Asymmetry**: There is a noticeable imbalance between your left and right limb mechanics. "
                                "Unilateral strength and stability exercises can help address this imbalance and reduce injury risk.\n")
     else:
-        recommendations.append("Asymmetry: Your bilateral movement symmetry is good.\n")
+        recommendations.append("**Asymmetry**: Your bilateral movement symmetry is good.\n")
     
     # Ground Contact Time
     if component_scores["ground_contact_score"] > 1.0:
-        recommendations.append("Ground Contact Time: Prolonged ground contact time may indicate inefficient landing mechanics. "
+        recommendations.append("**Ground Contact Time**: Prolonged ground contact time may indicate inefficient landing mechanics. "
                                "Consider drills that emphasize quick, explosive reactivity to improve shock absorption and reduce injury risk.\n")
     else:
-        recommendations.append("Ground Contact Time: Your ground contact time is within an optimal range.\n")
+        recommendations.append("**Ground Contact Time**: Your ground contact time is within an optimal range.\n")
     
     # Knee Alignment Variability
     if component_scores["variability_score"] > 1.0:
-        recommendations.append("Knee Alignment Variability: High variability in knee alignment suggests inconsistent neuromuscular control. "
+        recommendations.append("**Knee Alignment Variability**: High variability in knee alignment suggests inconsistent neuromuscular control. "
                                "Balance and stabilization exercises can help promote more consistent movement patterns during landing.\n")
     else:
-        recommendations.append("Knee Alignment Variability: Your knee alignment remains consistently controlled during landing.\n")
+        recommendations.append("**Knee Alignment Variability**: Your knee alignment remains consistently controlled during landing.\n")
     
     recommendations.append("")
-    recommendations.append("=== Summary and Next Steps ===\n")
+    # recommendations.append("=== Summary and Next Steps ===\n")
     if risk_category in ["High Risk", "Very High Risk"]:
         recommendations.append("Your overall risk profile is concerning. It is highly recommended that you consult "
                                "with a sports physiotherapist or strength and conditioning specialist to design "
@@ -700,7 +700,7 @@ def generate_recommendations(composite_score, risk_category, component_scores, m
     
     # Optional: Provide numeric summaries of each component.
     recommendations.append("")
-    recommendations.append("Detailed Component Scores:")
+    #recommendations.append("Detailed Component Scores:")
     for comp, score in component_scores.items():
         recommendations.append(f" - {comp.replace('_', ' ').title()}: {score:.2f}")
     
@@ -708,7 +708,7 @@ def generate_recommendations(composite_score, risk_category, component_scores, m
     recommendations.append("")
     recommendations.append("Measured Metrics:")
     for key, value in measured_metrics.items():
-        recommendations.append(f" - {key.replace('_', ' ').title()}: {value}")
+        recommendations.append(f" - {key.replace('_', ' ').title()}: {value:.2f}")
     
     return "\n".join(recommendations)
 
