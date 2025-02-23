@@ -330,7 +330,7 @@ def analyze_jump_metrics(pose_landmarker, processed_frames, toe_y_list, knee_y_l
         estimated_jump_height = np.nan
 
     # st.write(f"Takeoff frame: {takeoff_frame}, Apex frame: {apex_frame}, Landing frame: {landing_frame}")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     col1.metric("Time of flight", np.round(time_of_flight, 2))
     col2.metric("Estimated jump height", np.round(estimated_jump_height, 2))
     # st.write(f"Time of flight: {time_of_flight:.3f} s, Estimated jump height: {estimated_jump_height:.3f} m")
@@ -351,6 +351,7 @@ def analyze_jump_metrics(pose_landmarker, processed_frames, toe_y_list, knee_y_l
 
     # Ground contact time: time between landing and lowest hip point.
     ground_contact_time = (lowest_hip_frame - landing_frame) / fps
+    col3.metric("Ground contact time", np.round(ground_contact_time, 2))
     # st.write(f"Ground Contact Time: {ground_contact_time:.3f} s")
 
     # Hip-Knee Crossing: between landing_frame and lowest_hip_frame,
@@ -513,9 +514,18 @@ def analyze_knee_valgus_varus(processed_frames, landmarks_list, landing_frame, l
     right_risk = risk_category(avg_right_delta)
     overall_risk = "high risk" if "high risk" in [left_risk, right_risk] else ("caution" if "caution" in [left_risk, right_risk] else "safe")
     col1, col2, col3 = st.columns(3)
-    col1.metric("Max left knee delta", np.round(max_left_delta, 2))
-    col2.metric("Max right knee delta", np.round(max_right_delta, 2))
-    col3.metric("Overall risk", np.round((max_left_delta+max_right_delta)*100/(2*align_threshold), 0))
+    if max_left_delta < 8:
+        col1.metric("Max left knee delta", np.round(max_left_delta, 2), delta=1)
+    else:
+        col1.metric("Max left knee delta", np.round(max_left_delta, 2), delta=-1)
+    if max_right_delta < 8:
+        col2.metric("Max right knee delta", np.round(max_right_delta, 2), delta=1)
+    else:
+        col2.metric("Max right knee delta", np.round(max_right_delta, 2), delta=-1)
+    if max_left_delta > 8 or max_right_delta > 8:
+        col3.metric("Overall risk", "High")
+    else:
+        col3.metric("Overall risk", "Low")
     # st.write(f"Left average delta: {avg_left_delta:.2f} ({left_risk}), Right average delta: {avg_right_delta:.2f} ({right_risk}).")
     # st.write(f"Overall risk: {overall_risk}")
     
@@ -616,27 +626,27 @@ def generate_recommendations(composite_score, risk_category, component_scores, m
     individual component scores, and raw measured metrics.
     """
     recommendations = []
-    recommendations.append("=== Overall Analysis ===\n")
-    recommendations.append(f"Composite Risk Score: {composite_score:.2f}\n")
-    recommendations.append(f"Overall Risk Category: {risk_category}\n")
+    # recommendations.append("=== Overall Analysis ===\n")
+    # recommendations.append(f"Composite Risk Score: {composite_score:.2f}\n")
+    # recommendations.append(f"Overall Risk Category: {risk_category}\n")
     recommendations.append("")
     
     # Knee Alignment
     if component_scores["knee_alignment_score"] > 1.5:
-        recommendations.append("Knee Alignment: Your knee alignment deviates significantly from neutral. "
+        recommendations.append("**Knee Alignment**: Your knee alignment deviates significantly from neutral. "
                                "Excessive dynamic knee valgus/varus is strongly linked to ACL injury risk. "
                                "It is recommended that you engage in neuromuscular training (e.g., plyometrics, "
                                "landing mechanics drills, and dynamic balance exercises) to improve alignment.\n")
     else:
-        recommendations.append("Knee Alignment: Your knee alignment is within an acceptable range.\n")
+        recommendations.append("**Knee Alignment**: Your knee alignment is within an acceptable range.\n")
     
     # Knee Flexion
     if component_scores["knee_flexion_score"] > 1.0:
-        recommendations.append("Knee Flexion: Your landing knee flexion is lower than the optimal value. "
+        recommendations.append("**Knee Flexion**: Your landing knee flexion is lower than the optimal value. "
                                "A stiffer landing increases impact forces on the knee. Consider incorporating "
                                "eccentric strength training and landing technique coaching to enhance shock absorption.\n")
     else:
-        recommendations.append("Knee Flexion: Your landing technique shows adequate knee flexion.\n")
+        recommendations.append("**Knee Flexion**: Your landing technique shows adequate knee flexion.\n")
     
     # Hip Drop
     if component_scores["hip_drop_score"] > 1.0:
