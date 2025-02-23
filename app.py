@@ -284,7 +284,6 @@ def analyze_jump_metrics(pose_landmarker, processed_frames, toe_y_list, knee_y_l
         baseline_toe = np.mean(valid_toe[:10])
     else:
         baseline_toe = np.mean(valid_toe)
-    st.write(f"Baseline toe height (pixels): {baseline_toe:.2f}")
 
     # Assume baseline hip height is the average of the first 10 valid frames.
     valid_hip = hip_y_arr[~np.isnan(hip_y_arr)]
@@ -292,7 +291,6 @@ def analyze_jump_metrics(pose_landmarker, processed_frames, toe_y_list, knee_y_l
         baseline_hip = np.mean(valid_hip[:10])
     else:
         baseline_hip = np.mean(valid_hip)
-    st.write(f"Baseline hip height (pixels): {baseline_hip:.2f}")
     
     # Define a threshold (in pixels) for detecting departure/landing.
     threshold = 20  # adjust this threshold as needed
@@ -331,8 +329,11 @@ def analyze_jump_metrics(pose_landmarker, processed_frames, toe_y_list, knee_y_l
         time_of_flight = np.nan
         estimated_jump_height = np.nan
 
-    st.write(f"Takeoff frame: {takeoff_frame}, Apex frame: {apex_frame}, Landing frame: {landing_frame}")
-    st.write(f"Time of flight: {time_of_flight:.3f} s, Estimated jump height: {estimated_jump_height:.3f} m")
+    # st.write(f"Takeoff frame: {takeoff_frame}, Apex frame: {apex_frame}, Landing frame: {landing_frame}")
+    col1, col2 = st.columns(2)
+    col1.metric("Time of flight", np.round(time_of_flight, 2))
+    col2.metric("Estimated jump height", np.round(estimated_jump_height, 2))
+    # st.write(f"Time of flight: {time_of_flight:.3f} s, Estimated jump height: {estimated_jump_height:.3f} m")
 
     # Post-landing analysis: From landing_frame onward, find the frame where the hips are at their lowest (largest y value).
     lowest_hip_frame = None
@@ -342,15 +343,15 @@ def analyze_jump_metrics(pose_landmarker, processed_frames, toe_y_list, knee_y_l
             relative_index = np.argmax(post_landing_hip)  # highest y value means lowest physical hip position.
             lowest_hip_frame = landing_frame + relative_index
 
-    st.write(f"Lowest hip frame (post-landing): {lowest_hip_frame}")
+    # st.write(f"Lowest hip frame (post-landing): {lowest_hip_frame}")
 
     # Hip drop: difference between landing hip value and lowest hip value.
     hip_drop = hip_y_arr[landing_frame] - hip_y_arr[lowest_hip_frame]
-    st.write(f"Hip Drop (pixels): {hip_drop:.2f}")
+    # st.write(f"Hip Drop (pixels): {hip_drop:.2f}")
 
     # Ground contact time: time between landing and lowest hip point.
     ground_contact_time = (lowest_hip_frame - landing_frame) / fps
-    st.write(f"Ground Contact Time: {ground_contact_time:.3f} s")
+    # st.write(f"Ground Contact Time: {ground_contact_time:.3f} s")
 
     # Hip-Knee Crossing: between landing_frame and lowest_hip_frame,
     # find the first frame where hip_y >= knee_y.
@@ -361,10 +362,10 @@ def analyze_jump_metrics(pose_landmarker, processed_frames, toe_y_list, knee_y_l
                 hip_knee_cross_frame = i
                 break
 
-    if hip_knee_cross_frame is not None:
-        st.write(f"Hip-Knee crossing frame: {hip_knee_cross_frame}")
-    else:
-        st.write("Hip never crossed below knee during landing phase.")
+    # if hip_knee_cross_frame is not None:
+      #  st.write(f"Hip-Knee crossing frame: {hip_knee_cross_frame}")
+    # else:
+      #  st.write("Hip never crossed below knee during landing phase.")
 
     # If we have both landing and lowest_hip frames, compute knee angles for each leg at the lowest hip frame.
     knee_angles = {}
@@ -392,8 +393,12 @@ def analyze_jump_metrics(pose_landmarker, processed_frames, toe_y_list, knee_y_l
             angle_right = compute_angle(pt_hip_right, pt_knee_right, pt_ankle_right)
             knee_angles = {'left_knee_angle': angle_left, 'right_knee_angle': angle_right}
             avg_knee_flexion = (angle_left + angle_right) / 2
-            st.write(f"Left Knee Angle: {angle_left:.2f} deg, Right Knee Angle: {angle_right:.2f} deg")
-            st.write(f"Average Knee Flexion: {avg_knee_flexion:.2f} deg")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Left knee angle", np.round(angle_left, 2))
+            col2.metric("Right knee angle", np.round(angle_right, 2))
+            # st.write(f"Left Knee Angle: {angle_left:.2f} deg, Right Knee Angle: {angle_right:.2f} deg")
+            col3.metric("Average knee flexion", np.round(avg_knee_flexion, 2))
+            # st.write(f"Average Knee Flexion: {avg_knee_flexion:.2f} deg")
         else:
             st.write("No landmarks detected at lowest hip frame for knee angle analysis.")
 
@@ -488,6 +493,8 @@ def analyze_knee_valgus_varus(processed_frames, landmarks_list, landing_frame, l
     # Compute average delta values.
     avg_left_delta = np.nanmean(left_deltas) if left_deltas else np.nan
     avg_right_delta = np.nanmean(right_deltas) if right_deltas else np.nan
+    max_left_delta = np.nanmax(left_deltas) if left_deltas else np.nan
+    max_right_delta = np.nanmax(right_deltas) if right_deltas else np.nan
     asymmetry = abs(avg_left_delta - avg_right_delta)
     knee_alignment_variability = np.nanmean([np.nanstd(left_deltas), np.nanstd(right_deltas)])
     
@@ -505,9 +512,12 @@ def analyze_knee_valgus_varus(processed_frames, landmarks_list, landing_frame, l
     left_risk = risk_category(avg_left_delta)
     right_risk = risk_category(avg_right_delta)
     overall_risk = "high risk" if "high risk" in [left_risk, right_risk] else ("caution" if "caution" in [left_risk, right_risk] else "safe")
-    
-    st.write(f"Left average delta: {avg_left_delta:.2f} ({left_risk}), Right average delta: {avg_right_delta:.2f} ({right_risk}).")
-    st.write(f"Overall risk: {overall_risk}")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Max left knee delta", np.round(max_left_delta, 2))
+    col2.metric("Max right knee delta", np.round(max_right_delta, 2))
+    col3.metric("Overall risk", np.round((max_left_delta+max_right_delta)*100/(2*align_threshold), 0))
+    # st.write(f"Left average delta: {avg_left_delta:.2f} ({left_risk}), Right average delta: {avg_right_delta:.2f} ({right_risk}).")
+    # st.write(f"Overall risk: {overall_risk}")
     
     return {
         'left_avg_delta': avg_left_delta,
@@ -807,8 +817,6 @@ if uploaded_file is not None:
         with col_mid:
             st.header("Your Uploaded Video")
             st.video(video_bytes)
-    else:
-        st.write("Please Wait for Your Results...")
     # st.video(video_path)
 
     # Create pose landmarker (dummy instance).
