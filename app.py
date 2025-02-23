@@ -751,6 +751,10 @@ if uploaded_file is not None:
             video_bytes = video_file.read()
         st.video(video_bytes)
     else:
+        if converted_path:
+            st.error("Hello")
+        if os.path.exists(converted_path):
+            st.error("Second")
         st.error("Video conversion failed.")
     # st.video(video_path)
 
