@@ -3,6 +3,11 @@ import streamlit as st
 import tempfile
 import subprocess
 import sys
+import os
+import time
+import math
+import matplotlib.pyplot as plt
+import numpy as np
 
 def install_system_dependencies():
     try:
@@ -12,14 +17,9 @@ def install_system_dependencies():
         print(f"An error occurred while installing system dependencies: {e}")
         sys.exit(1)
 
-# Install system dependencies at runtime
 install_system_dependencies()
+
 import cv2
-import os
-import time
-import math
-import matplotlib.pyplot as plt
-import numpy as np
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
@@ -87,6 +87,52 @@ normative_data = {
 }
 
 # ------------------ Utility Functions ------------------
+def convert_mov_to_mp4_cv2(input_path, output_path):
+    """
+    Converts a .mov video file to MP4 using OpenCV.
+    Reads the input video, rotates each frame 90° clockwise,
+    and writes out an MP4 using the 'mp4v' codec.
+    """
+    cap = cv2.VideoCapture(input_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps <= 0:
+        fps = 30  # Fallback if FPS is not available.
+    orig_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    orig_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    new_width, new_height = orig_height, orig_width
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (new_width, new_height))
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        rotated_frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        out.write(rotated_frame)
+    cap.release()
+    out.release()
+    return output_path
+
+def convert_video_to_h264(input_path, output_path):
+    """
+    Converts the input video file to H264-encoded MP4 using FFmpeg.
+    This ensures compatibility with HTML5 video players in Streamlit.
+    """
+    command = [
+        'ffmpeg',
+        '-i', input_path,
+        '-vcodec', 'libx264',
+        '-acodec', 'aac',
+        '-strict', '-2',  # sometimes needed for AAC
+        '-y',  # overwrite output file if exists
+        output_path
+    ]
+    try:
+        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return output_path
+    except subprocess.CalledProcessError as e:
+        print("FFmpeg conversion failed:", e)
+        return None
+
 def compute_angle(p1, p2, p3):
     """
     Compute the angle (in degrees) at point p2 given three points p1, p2, p3.
@@ -655,21 +701,21 @@ def generate_recommendations(composite_score, risk_category, component_scores, m
     
     return "\n".join(recommendations)
 
-def export_video(frames, output_path, fps):
+def export_video(frames, temp_output_path, fps):
     """
-    Export a list of frames as a video file.
+    Exports the given list of frames to a temporary MP4 video file using OpenCV.
+    Returns the path of the exported video file.
     """
+    if not frames:
+        st.error("No frames to export.")
+        return None
     height, width = frames[0].shape[:2]
-    temp_filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(temp_filename, fourcc, fps, (width, height))
+    out = cv2.VideoWriter(temp_output_path, fourcc, fps, (width, height))
     for frame in frames:
         out.write(frame)
     out.release()
-    with open(temp_filename, "rb") as f:
-        video_bytes = f.read()
-    os.remove(temp_filename)
-    return video_bytes
+    return temp_output_path
 
 # ------------------ Streamlit UI Code ------------------
 
@@ -685,17 +731,34 @@ if uploaded_file is not None:
     file_ext = os.path.splitext(uploaded_file.name)[1].lower()
     tfile = tempfile.NamedTemporaryFile(delete=False, suffix=file_ext)
     tfile.write(uploaded_file.read())
-    video_path = tfile.name
     st.success("Video uploaded successfully!")
+    video_path = tfile.name
+    tfile.close()
+    input_video_path = video_path
     st.write(f"Video path: {video_path}")
-    st.video(video_path)
+
+    if file_ext == ".mov":
+        st.info("Converting MOV file to MP4 using OpenCV...")
+        temp_mp4_path = os.path.join(tempfile.gettempdir(), "converted_from_mov.mp4")
+        input_video_path = convert_mov_to_mp4_cv2(input_video_path, temp_mp4_path)
+
+    output_video_path = os.path.join(tempfile.gettempdir(), "converted_upload_video.mp4")
+    st.info("Converting video... Please wait.")
+    converted_path = convert_video_to_h264(input_video_path, output_video_path)
+    if converted_path and os.path.exists(converted_path):
+        st.success("Video conversion successful!")
+        with open(converted_path, "rb") as video_file:
+            video_bytes = video_file.read()
+        st.video(video_bytes)
+    else:
+        st.error("Video conversion failed.")
+    # st.video(video_path)
 
     # Create pose landmarker (dummy instance).
     pose_landmarker = create_pose_landmarker(lite_model_path)
     
     st.info("Processing video... Please wait.")
     processed_frames, avg_time_lite_front, avg_kp_lite_front, toe_y_list, knee_y_list, hip_y_list, landmarks_list, frame_indices, fps = process_front_video_lite(video_path, pose_landmarker)
-    pose_landmarker.close()
     
     if processed_frames:
         pose_landmarker = create_pose_landmarker(lite_model_path)
@@ -716,9 +779,13 @@ if uploaded_file is not None:
         composite_score, risk_category, component_scores = compute_composite_risk_score(measured_metrics, normative_data)
         recommendations = generate_recommendations(composite_score, risk_category, component_scores, measured_metrics)
         
-        output_video_path = os.path.join(tempfile.gettempdir(), "processed_video.mp4")
-        export_video(processed_frames, output_video_path, fps)
+        # output_video_path = os.path.join(tempfile.gettempdir(), "processed_video.mp4")
+        # saved_video_path = export_video(processed_frames, output_video_path, fps)
         # processed_video_bytes = export_video(processed_frames, fps)
+        temp_video_path = os.path.join(tempfile.gettempdir(), "processed_video.mp4")
+        exported_path = export_video(processed_frames, temp_video_path, fps)
+        converted_video_path = os.path.join(tempfile.gettempdir(), "processed_video_converted.mp4")
+        final_video_path = convert_video_to_h264(exported_path, converted_video_path)
         
         # Layout: left column for interactive plots and textual feedback; right column for video.
         col_left, col_right = st.columns([1, 1.5])
@@ -767,13 +834,16 @@ if uploaded_file is not None:
             ax.set_title('Knee Alignment Delta Values During Landing Phase')
             ax.legend()
             st.pyplot(fig)
-            
-            st.header("Textual Feedback")
-            st.markdown(recommendations)
-        
         with col_right:
             st.header("Processed Video")
-            st.video(output_video_path)
-            # st.video(processed_video_bytes)
+            if final_video_path and os.path.exists(final_video_path):
+                with open(final_video_path, "rb") as video_file:
+                    video_bytes = video_file.read()
+                st.video(video_bytes)
+            else:
+                st.error("The exported video could not be displayed.")
+
+        st.header("Textual Feedback")
+        st.markdown(recommendations)
     else:
         st.error("Video processing failed or produced no frames.")
